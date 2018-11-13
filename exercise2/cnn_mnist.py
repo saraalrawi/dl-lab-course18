@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov 8 19:12:24 2018
+Created on Tue Nov 13 21:39:07 2018
 
 @author: sarajamal
 """
+
 
 from __future__ import print_function
 
@@ -16,6 +17,7 @@ import pickle
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 
 
@@ -70,21 +72,9 @@ def mnist(datasets_dir='./data'):
     return train_x, one_hot(train_y), valid_x, one_hot(valid_y), test_x, one_hot(test_y)
 
 
-# Create a interactive session
-    '''
-    The only difference between Session and an InteractiveSession is that InteractiveSession makes 
-    itself the default session so that we can call run() or eval() without explicitly calling the session.
-    '''
-sess = tf.InteractiveSession()
-# create place holders None for the batch_size
-x_hold = tf.placeholder(tf.float32, [None, 28,28,1], name='x')
-y_hold = tf.placeholder(tf.float32, [None, 10], name='y_')
-y_pred = tf.placeholder(tf.float32, [None, 10])
+def cnn_model_fn(x, num_filters, filter_size):
 
-def cnn_model_fn(x, lr, num_filters, filter_size):
-    
-    #Layers defined using Layers API
-    # Conv Layer 1
+    # ConvLayer #1
     conv1 = tf.layers.conv2d(
         inputs=x,
         filters=num_filters,
@@ -92,10 +82,10 @@ def cnn_model_fn(x, lr, num_filters, filter_size):
         padding="same",
         activation=tf.nn.relu)
 
-    # Pooling 1
+    # Pooling Layer #1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
-    # Conv Layer 2
+    # ConvLayer #2
     conv2 = tf.layers.conv2d(
         inputs=pool1,
         filters=num_filters,
@@ -103,88 +93,103 @@ def cnn_model_fn(x, lr, num_filters, filter_size):
         padding="same",
         activation=tf.nn.relu)
 
-    # Pooling 2
+    # Pooling Layer #2
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
-    # Because the Dense layer is not 4 D we need to flatten the tensor
+    # Since the dense is not 4 D we need to flaten here 
     pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * num_filters])
 
     # Dense Layer
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
     # Logits layer
-    prediction = tf.layers.dense(inputs=dense, units=10)
-    return prediction 
+    y_pred = tf.layers.dense(inputs=dense, units=10)
+    
+    # y_pred = tf.nn.softmax(y_conv)
+
+    return y_pred
 
 
 def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_filters, batch_size, filter_size):
     # TODO: train and validate your convolutional neural networks with the provided data and hyperparameters
+    global num
+
+    x_hold = tf.placeholder(tf.float32, [None, 28, 28, 1], name='input_data')
+    y_ = tf.placeholder(tf.float32, [None, 10], name='output_data')
+
 
     n_samples = x_train.shape[0]
     n_batches = n_samples // batch_size
-    
-    
-    y_pred = cnn_model_fn(x_hold, lr, num_filters, filter_size)
-    sess.run(tf.global_variables_initializer())
-    
-    # Loss, error between prediction and target
-    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = y_pred, labels = y_hold))
-    
-    # GDOptimizer tries to minmize the loss
-    train_step = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy)
 
- 
-    prediction_c = tf.equal(tf.argmax(y_pred,1), tf.argmax(y_hold,1))
+    y_pred = cnn_model_fn(x_hold, num_filters, filter_size)
     
-    # determine accuracy
-    accuracy = tf.reduce_mean(tf.cast(prediction_c, tf.float32), name="accuracy")
     
+    # Loss Cross Entropy
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=y_pred)
+    
+    cross_entropy = tf.reduce_mean(cross_entropy)
+    
+    train_step = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy)
+    # Determine Prediction
+    correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_, 1))
+    # Create a save
     saver = tf.train.Saver()
 
-    learning_curve_c  = np.zeros(num_epochs)
-    
-    for epoch in range(num_epochs):
-        for b in range(n_batches):
-            # create batches copy from last exercise
-            x_batch = x_train[b * batch_size: (b + 1) * batch_size]
-            y_batch = y_train[b * batch_size: (b + 1 ) * batch_size]
-            
-            train_step.run(feed_dict={x_hold: x_batch, y_hold: y_batch})
-            
-        # Evaluate the model 
-        train_accuracy = accuracy.eval(feed_dict={x_hold: x_train, y_hold: y_train})
-        # Objective to get the loss 
-        learning_curve_c[epoch] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_hold:y_valid})
-        print("epoch %d, training accuracy %g"%(epoch + 1, train_accuracy))
-    path_to_model = saver.save(sess, '/Users/sarajamal/Documents/MSc. Computer Science - Freiburg/WS2018:2019/WS1819/DL LAB/dl-lab-2018/exercise2/myModel.ckpt')
-    print("Model saved in path: %s" % path_to_model)
-    return learning_curve_c, path_to_model  # TODO: Return the validation error after each epoch (i.e learning curve) and your model
+    with tf.Session() as sess:
+        
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="accuracy")
+        # Intialize the variabe
+        sess.run(tf.global_variables_initializer())
+        
+        learning_curve = np.zeros(num_epochs)
+
+        for epoch in range(num_epochs):
+
+            for b in range(n_batches):
+                x_batch = x_train[b * batch_size : ( b + 1) * batch_size]
+                y_batch = y_train[b * batch_size : (b + 1 ) * batch_size]
+
+                train_step.run(feed_dict={x_hold: x_batch, y_: y_batch})
+
+            learning_curve[i] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_:y_valid})
+            print("epoch %d, training error %g"%(epoch, learning_curve[epoch]))
+
+        path_to_model = saver.save(sess, '/project/ml_ws1819/alrawis/myModel'+ str(num)+'.ckpt')
+        num += 1
+        print("Model saved in path: %s" % model)
+    return learning_curve, path_to_model  # TODO: Return the validation error after each epoch (i.e learning curve) and your model
 
 
 def test(x_test, y_test, model):
     # TODO: test your network here by evaluating it on the test data
-    graph = tf.get_default_graph()
-    saver = tf.train.Saver()
-    # using restore we are gonig to restore the graph and the weights
-    saver.restore(sess, model)
-    accuracy = graph.get_tensor_by_name("accuracy:0")
-    x_hold = graph.get_tensor_by_name("x:0")
-    y_ = graph.get_tensor_by_name("y_:0")
-    test_error = accuracy.eval(feed_dict={x_hold: x_test, y_: y_test})
-    
-    print('The test Error:' , test_error)
+    tf.reset_default_graph()
+    graph = tf.Graph()
+
+    with tf.Session(graph=graph) as sess:
+        saver = tf.train.import_meta_graph(model + '.meta')
+        # rstore the weights into the variables of the graph
+        saver.restore(sess, model)
+
+        accuracy = graph.get_tensor_by_name("accuracy:0")
+        x_image = graph.get_tensor_by_name("input_data:0")
+        y_ = graph.get_tensor_by_name("output_data:0")
+        # 1- acc error rate 
+        test_error = 1 - accuracy.eval(feed_dict={x_image: x_test, y_: y_test})
+
     return test_error
 
+## Plotting function takes containers, hyperparameter, epochs
 def plot_loss_graph(learning_curve_container , hyper_value, num_epochs , hpname):
-    for i in range(len(learning_rate)):
+    for i in range(len(hyper_value)):
         epoch = [k for k in range(num_epochs)]
         plt.plot(epoch, np.asarray(learning_curve_container[i]), label =str(hyper_value[i]))
-        plt.xlabel('#Epochs')
-        plt.ylabel('learning curve')
+        plt.xlabel('# Epochs')
+        plt.ylabel('1-acc')
         plt.legend(loc='upper right')
     plt.show
     plt.savefig('loss_'+ hpname +'.png') 
-    
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_path", default="./", type=str, nargs="?",
@@ -195,7 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_filters", default=16, type=int, nargs="?",
                         help="The number of filters for each convolution layer")
     parser.add_argument("--batch_size", default=128, type=int, nargs="?", help="Batch size for SGD")
-    parser.add_argument("--epochs", default=10, type=int, nargs="?",
+    parser.add_argument("--epochs", default=12, type=int, nargs="?",
                         help="Determines how many epochs the network will be trained")
     parser.add_argument("--run_id", default=0, type=int, nargs="?",
                         help="Helps to identify different runs of an experiments")
@@ -208,7 +213,8 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     epochs = args.epochs
     filter_size = 3
-    # train and test convolutional neural network
+    
+    # train and test convolutional neural network using default values
     x_train, y_train, x_valid, y_valid, x_test, y_test = mnist(args.input_path)
 
     learning_curve, model = train_and_validate(x_train, y_train, x_valid, y_valid, epochs, lr, num_filters, batch_size, filter_size)
@@ -231,29 +237,25 @@ if __name__ == "__main__":
     fh = open(fname, "w")
     json.dump(results, fh)
     fh.close()
-
-    #Tryout different learning rates and save the results in results_learning_rates
-    learning_rate = [0.1, 0.01, 0.001, 0.0001] #
-    container = np.zeros([len(learning_rate), epochs]) 
-    for i in range(len(learning_rate)):
-        
-        print("Hyperparametet learning_rate:" , learning_rate[i] )
+    
+    # Tryout different learning rates and plot them
+    learnings = [0.1, 0.01, 0.001, 0.0001]
+    container = np.zeros([len(learnings), epochs]) 
+    for i in range(len(learnings)):
         x_train, y_train, x_valid, y_valid, x_test, y_test = mnist(args.input_path)
 
-        learning_curve, model = train_and_validate(x_train, y_train, x_valid, y_valid, epochs, learning_rate[i], num_filters, batch_size, filter_size)
-        
+        learning_curve, model = train_and_validate(x_train, y_train, x_valid, y_valid, epochs, learnings[i], num_filters, batch_size, filter_size)
+
         test_error = test(x_test, y_test, model)
 
         # save results in a dictionary and write them into a .json file
         results = dict()
-        results["lr"] = learning_rate[i]
+        results["lr"] = learnings[i]
         results["num_filters"] = num_filters
         results["batch_size"] = batch_size
         results["learning_curve"] = learning_curve.tolist()
         results["test_error"] = test_error.tolist()
         container[i]=results["learning_curve"]
-        
-        
 
         path = os.path.join(args.output_path, "results_learning_rates")
         os.makedirs(path, exist_ok=True)
@@ -263,18 +265,17 @@ if __name__ == "__main__":
         fh = open(fname, "w")
         json.dump(results, fh)
         fh.close()
-    plot_loss_graph(container , learning_rate, epochs , 'learing_rate')
-    # Tryout different filters, and save the result in results_filters
+    plot_loss_graph(container , learnings , epochs , 'learing_rate')
+
+
+    # Try out different filters and plot them
     filters = [1, 3, 5, 7]
-    container_filters = np.zeros([len(filters), epochs]) 
+    container_filters = np.zeros([len(filters), epochs])
     for i in range(len(filters)):
-        
-        print("Hyperparametet Filter size:" , filters[i] )
         x_train, y_train, x_valid, y_valid, x_test, y_test = mnist(args.input_path)
 
         learning_curve, model = train_and_validate(x_train, y_train, x_valid, y_valid, epochs, lr, num_filters, batch_size, filters[i])
-        
-        # Using the saved model (e.g. graph and weights, do test!)
+
         test_error = test(x_test, y_test, model)
 
         # save results in a dictionary and write them into a .json file
@@ -284,13 +285,16 @@ if __name__ == "__main__":
         results["batch_size"] = batch_size
         results["learning_curve"] = learning_curve.tolist()
         results["test_error"] = test_error.tolist()
+        container_filters[i]=results["learning_curve"]
 
         path = os.path.join(args.output_path, "results_filters")
         os.makedirs(path, exist_ok=True)
 
         fname = os.path.join(path, "results_run_" + str(i+1) + ".json")
+
         fh = open(fname, "w")
         json.dump(results, fh)
         fh.close()
     plot_loss_graph(container_filters , filters, epochs , 'filters')
+
 
