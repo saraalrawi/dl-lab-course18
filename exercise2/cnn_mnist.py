@@ -289,8 +289,8 @@ if __name__ == "__main__":
         os.makedirs(path, exist_ok=True)
 
         fname = os.path.join(path, "results_run_" + str(i+1) + ".json")
-        plot_loss_graph(container_filters , filters, epochs , 'filters')
-
         fh = open(fname, "w")
         json.dump(results, fh)
         fh.close()
+    plot_loss_graph(container_filters , filters, epochs , 'filters')
+
