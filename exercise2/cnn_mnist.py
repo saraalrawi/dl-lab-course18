@@ -15,6 +15,8 @@ import os
 import pickle
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 
 def one_hot(labels):
@@ -74,7 +76,7 @@ def mnist(datasets_dir='./data'):
     itself the default session so that we can call run() or eval() without explicitly calling the session.
     '''
 sess = tf.InteractiveSession()
-# create place holders
+# create place holders None for the batch_size
 x_hold = tf.placeholder(tf.float32, [None, 28,28,1], name='x')
 y_hold = tf.placeholder(tf.float32, [None, 10], name='y_')
 y_pred = tf.placeholder(tf.float32, [None, 10])
@@ -139,7 +141,7 @@ def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_f
     
     saver = tf.train.Saver()
 
-    learning_curve  = np.zeros(num_epochs)   
+    learning_curve_c  = np.zeros(num_epochs)
     
     for epoch in range(num_epochs):
         for b in range(n_batches):
@@ -152,11 +154,11 @@ def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_f
         # Evaluate the model 
         train_accuracy = accuracy.eval(feed_dict={x_hold: x_train, y_hold: y_train})
         # Objective to get the loss 
-        learning_curve[epoch] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_hold:y_valid})
+        learning_curve_c[epoch] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_hold:y_valid})
         print("epoch %d, training accuracy %g"%(epoch + 1, train_accuracy))
     path_to_model = saver.save(sess, '/Users/sarajamal/Documents/MSc. Computer Science - Freiburg/WS2018:2019/WS1819/DL LAB/dl-lab-2018/exercise2/myModel.ckpt')
     print("Model saved in path: %s" % path_to_model)
-    return learning_curve, path_to_model  # TODO: Return the validation error after each epoch (i.e learning curve) and your model
+    return learning_curve_c, path_to_model  # TODO: Return the validation error after each epoch (i.e learning curve) and your model
 
 
 def test(x_test, y_test, model):
@@ -173,7 +175,16 @@ def test(x_test, y_test, model):
     print('The test Error:' , test_error)
     return test_error
 
-
+def plot_loss_graph(learning_curve_container , hyper_value, num_epochs , hpname):
+    for i in range(len(learning_rate)):
+        epoch = [k for k in range(num_epochs)]
+        plt.plot(epoch, np.asarray(learning_curve_container[i]), label =str(hyper_value[i]))
+        plt.xlabel('#Epochs')
+        plt.ylabel('learning curve')
+        plt.legend(loc='upper right')
+    plt.show
+    plt.savefig('loss_'+ hpname +'.png') 
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_path", default="./", type=str, nargs="?",
@@ -220,9 +231,10 @@ if __name__ == "__main__":
     fh = open(fname, "w")
     json.dump(results, fh)
     fh.close()
-    
+
     #Tryout different learning rates and save the results in results_learning_rates
-    learning_rate = [0.1, 0.01, 0.001, 0.0001]
+    learning_rate = [0.1, 0.01, 0.001, 0.0001] #
+    container = np.zeros([len(learning_rate), epochs]) 
     for i in range(len(learning_rate)):
         
         print("Hyperparametet learning_rate:" , learning_rate[i] )
@@ -239,6 +251,9 @@ if __name__ == "__main__":
         results["batch_size"] = batch_size
         results["learning_curve"] = learning_curve.tolist()
         results["test_error"] = test_error.tolist()
+        container[i]=results["learning_curve"]
+        
+        
 
         path = os.path.join(args.output_path, "results_learning_rates")
         os.makedirs(path, exist_ok=True)
@@ -248,8 +263,10 @@ if __name__ == "__main__":
         fh = open(fname, "w")
         json.dump(results, fh)
         fh.close()
+    plot_loss_graph(container , learning_rate, epochs , 'learing_rate')
     # Tryout different filters, and save the result in results_filters
     filters = [1, 3, 5, 7]
+    container_filters = np.zeros([len(filters), epochs]) 
     for i in range(len(filters)):
         
         print("Hyperparametet Filter size:" , filters[i] )
@@ -272,6 +289,7 @@ if __name__ == "__main__":
         os.makedirs(path, exist_ok=True)
 
         fname = os.path.join(path, "results_run_" + str(i+1) + ".json")
+        plot_loss_graph(container_filters , filters, epochs , 'filters')
 
         fh = open(fname, "w")
         json.dump(results, fh)
