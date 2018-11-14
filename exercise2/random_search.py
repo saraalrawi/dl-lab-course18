@@ -45,67 +45,58 @@ class MyWorker(Worker):
         epochs = budget
         filter_size = config['filter_size']
         # TODO: train and validate your convolutional neural networks here
-        # Copy from the cnn_mnist
 
         n_samples = self.x_train.shape[0]
         n_batches = n_samples // batch_size
-        #Again define the session
         sess = tf.InteractiveSession()
-        # Placeholder for x and y
         x_hold = tf.placeholder(tf.float32, [None, 28, 28, 1], name='x')
-        y_hold = tf.placeholder(tf.float32, [None, 10], name='y_')
-        # Placeholder for the predictions
-        y_pred = tf.placeholder(tf.float32, [None, 10])
-        
-        # call the model and produce prediction
+        y_ = tf.placeholder(tf.float32, [None, 10], name='y_')
 
-        y_pred = cnn_model_fn(x_hold, lr, num_filters, filter_size)
+        y_pred = tf.placeholder(tf.float32, [None, 10])
+
+        y_pred = cnn_model_fn(x_hold, num_filters, filter_size)
         sess.run(tf.global_variables_initializer())
-        
-        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = y_pred, labels = y_hold))
+
+        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y_,logits=y_pred)
+        cross_entropy = tf.reduce_mean(cross_entropy)
         
         train_step = tf.train.GradientDescentOptimizer(lr).minimize(cross_entropy)
-        
-        prediction_c = tf.equal(tf.argmax(y_pred,1), tf.argmax(y_hold,1))
-        accuracy = tf.reduce_mean(tf.cast(prediction_c, tf.float32), name="accuracy")
-    
-       # iterate over the epochs
+
+        correct_prediction = tf.equal(tf.argmax(y_pred, 1), tf.argmax(y_, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32), name="accuracy")
+
         for epoch in range(epochs):
 
             for b in range(n_batches):
                 x_batch = self.x_train[b * batch_size:(b + 1) * batch_size]
                 y_batch = self.y_train[b * batch_size:(b + 1) * batch_size]
 
+                # y_pred_one_hot = one_hot(y_pred)
 
-                train_step.run(feed_dict={x_hold: x_batch, y_hold: y_batch})
+                train_step.run(feed_dict={x_hold: x_batch, y_: y_batch})
 
-            train_accuracy = accuracy.eval(feed_dict={x_hold: self.x_train, y_hold: self.y_train})
-            # TODO: We minimize so make sure you return the validation error here
-            validation_error = 1 - accuracy.eval(feed_dict={x_hold: self.x_valid, y_hold: self.y_valid})
-            # epoch + 1 to fix index
-            print("step %d, training accuracy %g" % (epoch +1, train_accuracy))
-            
-            info = 'First try'
+            train_accuracy = accuracy.eval(feed_dict={x_hold: self.x_train, y_: self.y_train})
+            validation_error = 1 - accuracy.eval(feed_dict={x_hold: self.x_valid, y_: self.y_valid})
+            print("epoch %d, training accuracy %g" % (epoch + 1, train_accuracy))
+
+        # TODO: We minimize so make sure you return the validation error here
         return ({
             'loss': validation_error,  # this is the a mandatory field to run hyperband
-            'info': info # can be used for any user-defined information - also mandatory
+            'info': {}  # can be used for any user-defined information - also mandatory
         })
 
     @staticmethod
     def get_configspace():
-        
-        # create config_space object
+
         config_space = CS.ConfigurationSpace()
-        learning_rate = CSH.UniformFloatHyperparameter('learning_rate', lower=1e-4, upper=1e-1, default_value='1e-2', log=True)
-        
-        # Create the hyperparameters and add them to the object config_space
+        lr = CSH.UniformFloatHyperparameter('learning_rate', lower=1e-4, upper=1e-1, default_value='1e-2', log=True)
 
         batch_size = CSH.UniformIntegerHyperparameter('batch_size', lower=16, upper=128, default_value=64, log=True)
 
         num_filters = CSH.UniformIntegerHyperparameter('num_filters', lower=8, upper=64, default_value=16, log=True)
         filter_size = CSH.CategoricalHyperparameter('filter_size', ['3', '4', '5'])
 
-        config_space.add_hyperparameters([learning_rate, batch_size, num_filters, filter_size])
+        config_space.add_hyperparameters([lr, batch_size, num_filters, filter_size])
 
         # TODO: Implement configuration space here. See https://github.com/automl/HpBandSter/blob/master/hpbandster/examples/example_5_keras_worker.py  for an example
 
@@ -169,5 +160,3 @@ hpvis.losses_over_time(all_runs)
 
 
 plt.savefig("random_search.png")
-
-# TODO: retrain the best configuration (called incumbent) and compute the test error
