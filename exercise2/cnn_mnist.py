@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 
-
+num = 0
 def one_hot(labels):
     """this creates a one hot encoding from a flat vector:
     i.e. given y = [0,2,1]
@@ -146,13 +146,13 @@ def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_f
         for epoch in range(num_epochs):
 
             for b in range(n_batches):
-                x_batch = x_train[b * batch_size : ( b + 1) * batch_size]
-                y_batch = y_train[b * batch_size : (b + 1 ) * batch_size]
+                x_batch = x_train[b * batch_size : ( b + 1 ) * batch_size]
+                y_batch = y_train[b * batch_size : ( b + 1 ) * batch_size]
 
                 train_step.run(feed_dict={x_hold: x_batch, y_: y_batch})
 
-            learning_curve[i] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_:y_valid})
-            print("epoch %d, training error %g"%(epoch, learning_curve[epoch]))
+            learning_curve[epoch] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_:y_valid})
+            print("epoch %d, training error %g"%(epoch + 1, learning_curve[epoch]))
 
         path_to_model = saver.save(sess, '/project/ml_ws1819/alrawis/myModel'+ str(num)+'.ckpt')
         num += 1
@@ -187,7 +187,8 @@ def plot_loss_graph(learning_curve_container , hyper_value, num_epochs , hpname)
         plt.ylabel('1-acc')
         plt.legend(loc='upper right')
     plt.show
-    plt.savefig('loss_'+ hpname +'.png') 
+    plt.savefig('loss_'+ hpname +'.png')
+    plt.clf()
 
 
 if __name__ == "__main__":
