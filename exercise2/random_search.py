@@ -71,39 +71,41 @@ class MyWorker(Worker):
                 x_batch = self.x_train[b * batch_size:(b + 1) * batch_size]
                 y_batch = self.y_train[b * batch_size:(b + 1) * batch_size]
 
-                # y_pred_one_hot = one_hot(y_pred)
 
                 train_step.run(feed_dict={x_hold: x_batch, y_: y_batch})
 
             train_accuracy = accuracy.eval(feed_dict={x_hold: self.x_train, y_: self.y_train})
             validation_error = 1 - accuracy.eval(feed_dict={x_hold: self.x_valid, y_: self.y_valid})
             print("epoch %d, training accuracy %g" % (epoch + 1, train_accuracy))
+            info = 'run'
 
-        # TODO: We minimize so make sure you return the validation error here
         return ({
             'loss': validation_error,  # this is the a mandatory field to run hyperband
-            'info': {}  # can be used for any user-defined information - also mandatory
+            'info': info  # can be used for any user-defined information - also mandatory
         })
 
     @staticmethod
     def get_configspace():
 
+        # Create an configSpace object and add the Hp setting to it
         config_space = CS.ConfigurationSpace()
-        lr = CSH.UniformFloatHyperparameter('learning_rate', lower=1e-4, upper=1e-1, default_value='1e-2', log=True)
-
+        #Float
+        learn = CSH.UniformFloatHyperparameter('learning_rate', lower=1e-4, upper=1e-1, default_value='1e-2', log=True)
+        # Integer
         batch_size = CSH.UniformIntegerHyperparameter('batch_size', lower=16, upper=128, default_value=64, log=True)
-
+        
         num_filters = CSH.UniformIntegerHyperparameter('num_filters', lower=8, upper=64, default_value=16, log=True)
+        # Categorical
         filter_size = CSH.CategoricalHyperparameter('filter_size', ['3', '4', '5'])
 
-        config_space.add_hyperparameters([lr, batch_size, num_filters, filter_size])
+        config_space.add_hyperparameters([learn, batch_size, num_filters, filter_size])
 
         # TODO: Implement configuration space here. See https://github.com/automl/HpBandSter/blob/master/hpbandster/examples/example_5_keras_worker.py  for an example
 
         return config_space
 
 
-parser = argparse.ArgumentParser(description='Example 1 - sequential and local execution.')
+parser = argparse.ArgumentParser(description='Example 1')
 parser.add_argument('--budget', type=float,
                     help='Maximum budget used during the optimization, i.e the number of epochs.', default=6)
 parser.add_argument('--n_iterations', type=int, help='Number of iterations performed by the optimizer', default=50)
@@ -151,10 +153,10 @@ incumbent = res.get_incumbent_id()
 print('Best found configuration:', id2config[incumbent]['config'])
 
 
-# Plots the performance of the best found validation error over time
+# Plots the performance
 all_runs = res.get_all_runs()
-# Let's plot the observed losses grouped by budget,
 
+#Plotting !
 
 hpvis.losses_over_time(all_runs)
 
