@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 13 21:39:07 2018
-
 @author: sarajamal
 """
 
@@ -103,11 +101,9 @@ def cnn_model_fn(x, num_filters, filter_size):
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
 
     # Logits layer
-    y_pred = tf.layers.dense(inputs=dense, units=10)
+    prediction = tf.layers.dense(inputs=dense, units=10)
     
-    # y_pred = tf.nn.softmax(y_conv)
-
-    return y_pred
+    return prediction
 
 
 def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_filters, batch_size, filter_size):
@@ -154,9 +150,9 @@ def train_and_validate(x_train, y_train, x_valid, y_valid, num_epochs, lr, num_f
             learning_curve[epoch] = 1 - accuracy.eval(feed_dict={x_hold:x_valid, y_:y_valid})
             print("epoch %d, training error %g"%(epoch + 1, learning_curve[epoch]))
 
-        path_to_model = saver.save(sess, '/project/ml_ws1819/alrawis/myModel'+ str(num)+'.ckpt')
+        path_to_model = saver.save(sess, '/Users/sarajamal/Documents/MSc. Computer Science - Freiburg/WS2018:2019/WS1819/DL LAB/dl-lab-2018/exercise2/myModel'+ str(num)+'.ckpt')
         num += 1
-        print("Model saved in path: %s" % model)
+        print("Model saved in path: %s" % path_to_model)
     return learning_curve, path_to_model  # TODO: Return the validation error after each epoch (i.e learning curve) and your model
 
 
