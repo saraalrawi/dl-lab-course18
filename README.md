@@ -1,3 +1,5 @@
 # dl_lab_2018
-The exercises for the deep learning lab course we are teaching at the University of Freiburg.  The course page itself can be found here: http://dl-lab.informatik.uni-freiburg.de
+This repo created for the deep learning lab at the university of Freiburg.
+
+The Lab homepage: http://dl-lab.informatik.uni-freiburg.de
 
