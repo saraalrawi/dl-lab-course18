@@ -223,6 +223,14 @@ def FCN_Seg(self, is_training=True):
         # with the corresponding skip connection (DB3_skip_connection) through concatenation.
         # TODO (4.3) - Repeat TODO(4.2) now producing 96 output feature maps and fusing the upsampled features 
         # with the corresponding skip connection (DB2_skip_connection) through concatenation.
+        
+        # TODO (4.4) - incorporate a upsample function which takes the features from TODO(4.3) 
+        # and produce 120 output feature maps which are 2x bigger in resolution than 
+        # TODO(4.3). Remember if dim(upsampled_features) > dim(imput image) you must crop
+        # upsampled_features to the same resolution as imput image
+        # output feature name should match the next convolution layer, for instance
+        # current_up4 
+        
     if self.configuration == 4:
 
         ######################################################################################
@@ -266,14 +274,7 @@ def FCN_Seg(self, is_training=True):
         convolute3 = Convolution(fused3,96,3,name="config4_3")
         
         
-        
-
-        # TODO (4.4) - incorporate a upsample function which takes the features from TODO(4.3) 
-        # and produce 120 output feature maps which are 2x bigger in resolution than 
-        # TODO(4.3). Remember if dim(upsampled_features) > dim(imput image) you must crop
-        # upsampled_features to the same resolution as imput image
-        # output feature name should match the next convolution layer, for instance
-        # current_up4 
+        # 4.4 
         current_up5  = TransitionUp_elu(convolute3, 120, 2 , '4.4')
         
         if(current_up5.shape[1] > self.tgt_image.shape[1]):
